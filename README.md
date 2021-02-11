@@ -192,6 +192,9 @@ and a `,` as a decimal separator.
 Spacing determines the number of characters in each character group. It is only
 of interest when the spacing is not nothing. The default spacing is 3.
 
+Apparently some cultures separate numeric digits with a non-constant group size.
+Please file an issue if this feature is important to you.
+
 ### Decimal separator
 
 When using the builder to explicitly set formatter options, it is possible to

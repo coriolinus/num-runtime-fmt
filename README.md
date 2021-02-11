@@ -14,8 +14,8 @@ This crate implements numeric formatting with a combination of properties not
 found elsewhere:
 
 - **Runtime**: The format specifiers do not need to be known in advance
-- **Flexible**: The format specification is a superset of the format specifiers
-  in the standard library.
+- **Flexible**: The format specification supports nearly a superset of the
+  features of the standard library.
 - **Focused**: Keeps things simple by offering a very simple interface which can
   format a single number at a time. More complicated formatting jobs can be
   accomplished by passing the output into standard formatting machinery.
@@ -42,13 +42,13 @@ format macros provided by `std::fmt`. However, they are exclusively concerned
 with formatting a single numeric value. Therefore, the specification language is
 somewhat truncated: it omits both braces and the colon which precedes the format
 specification. Therefore, where in the standard formatting machinery you might
-write
+write:
 
 ```rust
 let hex_digit = format!("{:02x}", 0xf0);
 ```
 
-With this library, the equivalent would be
+With this library, the equivalent would be:
 
 ```rust
 let hex_digit = NumFmt::from_str("02x")?.format(0xf0);
@@ -62,16 +62,46 @@ let hex_digit = NumFmt::from_str("02x")?.format(0xf0);
 > standard formatter supports named width parameters. Dynamic width parameters
 > are legal in this crate, but they cannot be named.
 
-Subsequent sections of this reference are arranged the their positional order in
-the format string. All are optional.
+### Grammar
 
-### Sign
+The gramar for the format string derives substantially from the standard library's:
+
+```text
+format_spec := [[fill]align][sign]['#']['0'][width]['.' precision][type]
+fill := character
+align := '<' | '^' | '>' | 'v'
+sign := '+' | '-'
+format := '#'
+width := count
+precision := count
+type := 'b' | 'o' | 'd' | 'x' | 'X'
+count := '$' | integer
+```
+
+### `fill`
+
+Any single `char` which precedes an align specifier is construed as the fill
+character: when `width` is greater than the actual rendered width of the number,
+the excess is padded with the ASCII character corresponding to this byte.
+
+> **Note**: Wide characters are counted according to their bit width, not their
+> quantity.
+
+### `align`ment
+
+- `>`: the output is right-aligned in `width` columns (default).
+- `^`: the output is centered in `width` columns.
+- `<`: the output is left-aligned in `width` columns.
+- `v`: attempt to align the decimal point at column index `width`. For integers,
+  equivalent to `>`.
+
+### `sign`
 
 - `-`: print a leading `-` for negative numbers, and nothing in particular for
   positive (default)
 - `+`: print a leading `+` for positive numbers
 
-### Format
+### `#`
 
 If a `#` character is present, print a base specification before the number (see
 below):
@@ -81,36 +111,30 @@ below):
 - decimal: `0d`
 - hex: `0x`
 
-### Fill
+### `0`
 
-Any single `char` except an alignment specifier (see below), sign specifier (see
-above), or format specifier (see above), which precedes a width specifier is
-construed as the fill character: when `width` is greater than the actual
-rendered width of the number, the excess is padded with the ASCII character
-corresponding to this byte.
+Conceptually, this is shorthand for the common pattern `0>`; it just saves a
+char, and looks better when combined with a sign specifier. However, it comes
+with a caveat:
 
-> **Note**: Wide characters are counted by their bit width, not their quantity.
+```rust
+assert_eq!(NumFmt::from_str("-03").unwrap().format(-1), "-01");
+assert_eq!(NumFmt::from_str("0>-3").unwrap().format(-1), "-001");
+```
 
-### Alignment
-
-- `>`: the output is right-aligned in `width` columns (default)
-- `^`: the output is centered in `width` columns.
-- `<`: the output is left-aligned in `width` columns
-- `v`: attempt to align the decimal point at column index `width`. For integers,
-  equivalent to `>`.
+The distinction is that the `0` formatter includes the number's sign in the
+desired width; an explicit fill does not include the sign in the width
+calculation.
 
 ### Width
-
-- `N`: use `N` as the desired width.
-- `$`: use a dynamic width from the `format_with` method.
 
 This is a parameter for the "minimum width" that the format should take up. If
 the value's string does not fill up this many characters, then the padding
 specified by fill/alignment will be used to take up the required space (see
 below).
 
-The value for the width can also be set dynamically: instead of an integer, use
-a `$` sigil and the alternate function:
+When using the `$` sigil instead of an explicit width, the width can be set
+dynamically:
 
 ```rust
 assert_eq!(NumFmt::from_str("-^$").unwrap().format_with(1, Dynamic::width(5)), "--1--");
@@ -119,9 +143,6 @@ assert_eq!(NumFmt::from_str("-^$").unwrap().format_with(1, Dynamic::width(5)), "
 If an explicit width is not provided, defaults to 0.
 
 ### Precision
-
-- `.N`: use `N` as the desired precision.
-- `.$`: use a dynamic precision from the `format_with` method.
 
 Ignored for integers.
 
@@ -132,6 +153,18 @@ assert_eq!(NumFmt::from_str("|^.$").unwrap().format_with(1, Dynamic::precision(5
 ```
 
 If an explicit precision is not provided, defaults to 0.
+
+### Type
+
+- `b`: Emit this number's binary representation
+- `o`: Emit this number's octal representation
+- `d`: Emit this number's decimal representation (default)
+- `x`: Emit this number's hexadecimal representation with lowercase letters
+- `X`: Emit this number's hexadecimal representation with uppercase letters
+
+> **Note**: This is one of a few areas where the standard library has
+> capabilities this library does not: it supports some other numeric formats.
+> Pull requests welcomed to bring this up to parity.
 
 ### TODO
 

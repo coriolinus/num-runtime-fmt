@@ -1,7 +1,6 @@
 # `num-runtime-fmt`
 
-A Rust crate for producing string representations of numbers according to format strings provided at
-runtime.
+Format numbers according to runtime specifications.
 
 > **Note**: This crate is currently under development. This document currently serves more as a
 > development guideline than as an accurate description of capabilities.

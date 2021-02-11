@@ -128,7 +128,7 @@ The distinction is that the `0` formatter includes the number's sign in the
 desired width; an explicit fill does not include the sign in the width
 calculation.
 
-### Width
+### `width`
 
 This is a parameter for the "minimum width" that the format should take up. If
 the value's string does not fill up this many characters, then the padding
@@ -144,7 +144,7 @@ assert_eq!(NumFmt::from_str("-^$").unwrap().format_with(1, Dynamic::width(5)), "
 
 If an explicit width is not provided, defaults to 0.
 
-### Precision
+### `precision`
 
 Ignored for integers.
 
@@ -156,7 +156,7 @@ assert_eq!(NumFmt::from_str("|^.$").unwrap().format_with(1, Dynamic::precision(5
 
 If an explicit precision is not provided, defaults to 0.
 
-### Type
+### `type`
 
 - `b`: Emit this number's binary representation
 - `o`: Emit this number's octal representation
@@ -168,7 +168,7 @@ If an explicit precision is not provided, defaults to 0.
 > capabilities this library does not: it supports some other numeric formats.
 > Pull requests welcomed to bring this up to parity.
 
-### Separator
+### `separator`
 
 A separator is a non-numeric character inserted between groups of digits to make
 it easier for humans to parse the number when reading. Different separators may
@@ -187,7 +187,7 @@ to separate numeric groups with an arbitrary `char`. This can be desirable to
 i.e. support German number formats, which use a `.` to separate numeric groups
 and a `,` as a decimal separator.
 
-### Spacing
+### `spacing`
 
 Spacing determines the number of characters in each character group. It is only
 of interest when the spacing is not nothing. The default spacing is 3.

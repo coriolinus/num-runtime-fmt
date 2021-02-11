@@ -35,9 +35,9 @@ found elsewhere:
   formatting macros with their own syntax, but which appear to be somewhat less
   powerful than those of the stdlib.
 
-## Format Reference
+## Format String Reference
 
-The formatters in this crate implement a superset of features available in the
+The formatters in this crate implement a near superset of features available in the
 format macros provided by `std::fmt`. However, they are exclusively concerned
 with formatting a single numeric value. Therefore, the specification language is
 somewhat truncated: it omits both braces and the colon which precedes the format
@@ -67,7 +67,7 @@ let hex_digit = NumFmt::from_str("02x")?.format(0xf0);
 The gramar for the format string derives substantially from the standard library's:
 
 ```text
-format_spec := [[fill]align][sign]['#']['0'][width]['.' precision][type]
+format_spec := [[fill]align][sign]['#'][['0']width]['.' precision][type][separator[spacing]]
 fill := character
 align := '<' | '^' | '>' | 'v'
 sign := '+' | '-'
@@ -75,6 +75,8 @@ format := '#'
 width := count
 precision := count
 type := 'b' | 'o' | 'd' | 'x' | 'X'
+separator := '_', | ',' | ' '
+spacing := count
 count := '$' | integer
 ```
 
@@ -166,15 +168,33 @@ If an explicit precision is not provided, defaults to 0.
 > capabilities this library does not: it supports some other numeric formats.
 > Pull requests welcomed to bring this up to parity.
 
-### TODO
+### Separator
 
-- group separator char
-- group width
+A separator is a non-numeric character inserted between groups of digits to make
+it easier for humans to parse the number when reading. Different separators may
+be desirable in different contexts.
 
-### Other Options
+- `_`: Separate numeric groups with an underscore
+- `,`: Separate numeric groups with a comma
+- ` `: Separate numeric groups with a space
 
-These options require explicitly building a `NumFmt` instance, but allow control
-of options not available via the format strings.
+By default, numeric groups are not separated. It is not possible to explicitly
+specify that numeric groups are not separated when using a format string.
+However, this can be specified when building the formatter via builder.
 
-- decimal separator
-- non-constant group widths (i.e. Indian)
+Wyhen using the builder to explicitly set formatter options, it is also possible
+to separate numeric groups with an arbitrary `char`. This can be desirable to
+i.e. support German number formats, which use a `.` to separate numeric groups
+and a `,` as a decimal separator.
+
+### Spacing
+
+Spacing determines the number of characters in each character group. It is only
+of interest when the spacing is not nothing. The default spacing is 3.
+
+### Decimal separator
+
+When using the builder to explicitly set formatter options, it is possible to
+set the decimal separator to any `char`. This can be desirable to i.e. support
+German number formats, which use a `.` to separate numeric groups and a `,` as a
+decimal separator.

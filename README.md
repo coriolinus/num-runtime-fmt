@@ -51,7 +51,7 @@ let hex_digit = format!("{:02x}", 0xf0);
 With this library, the equivalent would be:
 
 ```rust
-let hex_digit = NumFmt::from_str("02x")?.format(0xf0);
+let hex_digit = NumFmt::from_str("02x")?.fmt(0xf0);
 ```
 
 > **Note**: though these formatters support a superset of features of the
@@ -83,10 +83,20 @@ count := '$' | integer
 
 Any single `char` which precedes an align specifier is construed as the fill
 character: when `width` is greater than the actual rendered width of the number,
-the excess is padded with the ASCII character corresponding to this byte.
+the excess is padded with this character.
 
 > **Note**: Wide characters are counted according to their bit width, not their
 > quantity.
+
+```rust
+let heart = '🖤';
+assert_eq!(heart.len_utf8(), 4);
+let fmt = NumFmt::builder().fill(heart).width(6).build();
+// Note that this renders as two characters: we requested a width of 6.
+// The number renders as a single character. The heart fills up the next 4 for a total of 5.
+// Adding an extra heart would exceed the requested width, so it only renders one.
+assert_eq!(fmt.fmt(1), "🖤1");
+```
 
 ### `align`ment
 
@@ -104,23 +114,29 @@ the excess is padded with the ASCII character corresponding to this byte.
 
 ### `#`
 
-If a `#` character is present, print a base specification before the number (see
-below):
+If a `#` character is present, print a base specification before the number
+according to its format (see `format` below).
 
 - binary: `0b`
 - octal: `0o`
 - decimal: `0d`
 - hex: `0x`
 
+This base specification counts toward the width of the number:
+
+```rust
+assert_eq!(NumFmt::from_str("#04b").unwrap().fmt(2), "0b10");
+```
+
 ### `0`
 
-Conceptually, this is shorthand for the common pattern `0>`; it just saves a
+Conceptually, this is similar to the common pattern `0>`; it saves a
 char, and looks better when combined with a sign specifier. However, it comes
 with a caveat:
 
 ```rust
-assert_eq!(NumFmt::from_str("-03").unwrap().format(-1), "-01");
-assert_eq!(NumFmt::from_str("0>-3").unwrap().format(-1), "-001");
+assert_eq!(NumFmt::from_str("-03").unwrap().fmt(-1), "-01");
+assert_eq!(NumFmt::from_str("0>-3").unwrap().fmt(-1), "-001");
 ```
 
 The distinction is that the `0` formatter includes the number's sign in the
@@ -132,13 +148,13 @@ calculation.
 This is a parameter for the "minimum width" that the format should take up. If
 the value's string does not fill up this many characters, then the padding
 specified by fill/alignment will be used to take up the required space (see
-below).
+`fill` above).
 
 When using the `$` sigil instead of an explicit width, the width can be set
 dynamically:
 
 ```rust
-assert_eq!(NumFmt::from_str("-^$").unwrap().format_with(1, Dynamic::width(5)), "--1--");
+assert_eq!(NumFmt::from_str("-^$").unwrap().fmt_with(1, Dynamic::width(5)), "--1--");
 ```
 
 If an explicit width is not provided, defaults to 0.
@@ -150,7 +166,7 @@ Ignored for integers.
 For non-integers, this is how many digits after the decimal point are printed.
 
 ```rust
-assert_eq!(NumFmt::from_str("|^.$").unwrap().format_with(1, Dynamic::precision(5)), "|0.3|");
+assert_eq!(NumFmt::from_str("|^.$").unwrap().fmt_with(1, Dynamic::precision(5)), "|0.3|");
 ```
 
 If an explicit precision is not provided, defaults to 0.
@@ -169,7 +185,7 @@ If an explicit precision is not provided, defaults to 0.
 
 ### `separator`
 
-A separator is a non-numeric character inserted between groups of digits to make
+A separator is a (typically non-numeric) character inserted between groups of digits to make
 it easier for humans to parse the number when reading. Different separators may
 be desirable in different contexts.
 
@@ -189,7 +205,7 @@ and a `,` as a decimal separator.
 ### `spacing`
 
 Spacing determines the number of characters in each character group. It is only
-of interest when the spacing is not nothing. The default spacing is 3.
+of interest when the separator is set. The default spacing is 3.
 
 Apparently some cultures separate numeric digits with a non-constant group size.
 Please file an issue if this feature is important to you.

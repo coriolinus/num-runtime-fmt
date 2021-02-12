@@ -176,7 +176,7 @@ be desirable in different contexts.
 
 - `_`: Separate numeric groups with an underscore
 - `,`: Separate numeric groups with a comma
-- ` `: Separate numeric groups with a space
+- ` ` (space char): Separate numeric groups with a space
 
 By default, numeric groups are not separated. It is not possible to explicitly
 specify that numeric groups are not separated when using a format string.

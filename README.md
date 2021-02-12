@@ -67,14 +67,13 @@ let hex_digit = NumFmt::from_str("02x")?.format(0xf0);
 The gramar for the format string derives substantially from the standard library's:
 
 ```text
-format_spec := [[fill]align][sign]['#'][['0']width]['.' precision][type][separator[spacing]]
+format_spec := [[fill]align][sign]['#'][['0']width]['.' precision][format][separator[spacing]]
 fill := character
 align := '<' | '^' | '>' | 'v'
 sign := '+' | '-'
-format := '#'
 width := count
 precision := count
-type := 'b' | 'o' | 'd' | 'x' | 'X'
+format := 'b' | 'o' | 'd' | 'x' | 'X'
 separator := '_', | ',' | ' '
 spacing := count
 count := '$' | integer
@@ -156,7 +155,7 @@ assert_eq!(NumFmt::from_str("|^.$").unwrap().format_with(1, Dynamic::precision(5
 
 If an explicit precision is not provided, defaults to 0.
 
-### `type`
+### `format`
 
 - `b`: Emit this number's binary representation
 - `o`: Emit this number's octal representation

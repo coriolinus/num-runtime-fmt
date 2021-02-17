@@ -1,7 +1,4 @@
-mod default_upper_hex;
 pub mod impls;
-
-pub use default_upper_hex::DefaultUpperHex;
 
 /// This trait enables a type to be formatted by [`NumFmt`].
 ///

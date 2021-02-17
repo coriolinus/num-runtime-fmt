@@ -146,6 +146,127 @@ impl Iterator for DecIter {
     }
 }
 
+macro_rules! impl_for {
+    (unsigned_int $type:ident) => {
+        mod $type {
+            use super::{BinIter, DecIter, HexIter, OctIter};
+            use crate::Numeric;
+
+            impl Numeric for $type {
+                type BinIter = BinIter<$type>;
+                type OctIter = OctIter<$type>;
+                type DecLeftIter = DecIter;
+                type DecRightIter = DecIter;
+                type HexIter = HexIter<$type>;
+
+                fn binary(&self) -> Option<Self::BinIter> {
+                    Some(BinIter::new(*self))
+                }
+
+                fn octal(&self) -> Option<Self::OctIter> {
+                    Some(OctIter::new(*self))
+                }
+
+                fn hex(&self) -> Option<Self::HexIter> {
+                    Some(HexIter::new(*self))
+                }
+
+                fn decimal(&self) -> (Self::DecLeftIter, Option<Self::DecRightIter>) {
+                    DecIter::new(*self)
+                }
+
+                fn is_negative(&self) -> bool {
+                    false
+                }
+            }
+        }
+    };
+    (signed_int $type:ident) => {
+        mod $type {
+            use super::{BinIter, DecIter, HexIter, OctIter};
+            use crate::Numeric;
+
+            impl Numeric for $type {
+                type BinIter = BinIter<$type>;
+                type OctIter = OctIter<$type>;
+                type DecLeftIter = DecIter;
+                type DecRightIter = DecIter;
+                type HexIter = HexIter<$type>;
+
+                fn binary(&self) -> Option<Self::BinIter> {
+                    Some(BinIter::new(self.abs()))
+                }
+
+                fn octal(&self) -> Option<Self::OctIter> {
+                    Some(OctIter::new(self.abs()))
+                }
+
+                fn hex(&self) -> Option<Self::HexIter> {
+                    Some(HexIter::new(self.abs()))
+                }
+
+                fn decimal(&self) -> (Self::DecLeftIter, Option<Self::DecRightIter>) {
+                    DecIter::new(self.abs())
+                }
+
+                fn is_negative(&self) -> bool {
+                    *self < 0
+                }
+            }
+        }
+    };
+    (float $type:ident) => {
+        mod $type {
+            use super::DecIter;
+            use crate::Numeric;
+            use std::iter::Empty;
+
+            impl Numeric for $type {
+                type BinIter = Empty<char>;
+                type OctIter = Empty<char>;
+                type DecLeftIter = DecIter;
+                type DecRightIter = DecIter;
+                type HexIter = Empty<char>;
+
+                fn binary(&self) -> Option<Self::BinIter> {
+                    None
+                }
+
+                fn octal(&self) -> Option<Self::OctIter> {
+                    None
+                }
+
+                fn hex(&self) -> Option<Self::HexIter> {
+                    None
+                }
+
+                fn decimal(&self) -> (Self::DecLeftIter, Option<Self::DecRightIter>) {
+                    DecIter::new(self.abs())
+                }
+
+                fn is_negative(&self) -> bool {
+                    *self < 0.0
+                }
+            }
+        }
+    };
+}
+
+impl_for!(unsigned_int u8);
+impl_for!(unsigned_int u16);
+impl_for!(unsigned_int u32);
+impl_for!(unsigned_int u64);
+impl_for!(unsigned_int u128);
+impl_for!(unsigned_int usize);
+// TODO: impl for i8
+impl_for!(signed_int i16);
+impl_for!(signed_int i32);
+impl_for!(signed_int i64);
+impl_for!(signed_int i128);
+impl_for!(signed_int isize);
+impl_for!(float f32);
+impl_for!(float f64);
+
 #[cfg(test)]
 mod tests {
     macro_rules! suite_for {

@@ -11,4 +11,5 @@ pub use base::Base;
 pub use builder::Builder;
 pub use dynamic::Dynamic;
 pub use num_fmt::NumFmt;
+pub use numeric_trait::Numeric;
 pub use sign::Sign;

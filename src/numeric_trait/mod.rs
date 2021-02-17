@@ -92,4 +92,7 @@ pub trait Numeric {
     /// Note that the implementation must provide only the lowercase implementation. The formatter
     /// uppercases the output of this function when the user requests uppercase hexadecimal.
     fn hex(&self) -> Option<Self::HexIter>;
+
+    /// `true` when this value is less than 0.
+    fn is_negative(&self) -> bool;
 }

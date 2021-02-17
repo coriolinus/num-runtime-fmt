@@ -1,6 +1,6 @@
 pub mod impls;
 
-/// This trait enables a type to be formatted by [`NumFmt`].
+/// This trait enables a type to be formatted by [`NumFmt`][crate::NumFmt].
 ///
 /// The fundamental abstraction used is an optional iterator over a stream of characters. Returning
 /// `None` always indicates that representation in that base is not available for this type. Any

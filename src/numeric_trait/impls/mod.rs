@@ -1,4 +1,4 @@
-//! This module contains implementations of [`Numeric`] for several types, plus helpers which can
+//! This module contains implementations of [`Numeric`][crate::Numeric] for several types, plus helpers which can
 //! ease implementation for your own type.
 
 use std::ops::{BitAnd, ShrAssign};

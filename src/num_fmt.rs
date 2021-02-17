@@ -88,6 +88,20 @@ impl NumFmt {
         };
         let decimal_pos = decimal_pos.unwrap_or_else(|| digits.len());
 
+        debug_assert!(
+            {
+                let legal: &dyn Fn(&char) -> bool = match self.base() {
+                    Base::Binary => &|ch| ('0'..='1').contains(ch),
+                    Base::Octal => &|ch| ('0'..='7').contains(ch),
+                    Base::Decimal => &|ch| *ch == '.' || ('0'..='9').contains(ch),
+                    Base::LowerHex => &|ch| ('0'..='9').contains(ch) || ('a'..='f').contains(ch),
+                    Base::UpperHex => &|ch| ('0'..='9').contains(ch) || ('A'..='F').contains(ch),
+                };
+                digits.iter().all(legal)
+            },
+            "illegal characters in number; check its `impl Numeric`",
+        );
+
         let width_used = digits.len();
         let width_desired = self.width_with(dynamic);
         let (mut padding_front, padding_rear) = match self.align() {

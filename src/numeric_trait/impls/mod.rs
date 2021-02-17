@@ -6,6 +6,27 @@ use std::ops::{BitAnd, ShrAssign};
 macro_rules! impl_iter {
     ($iter:ident) => {
         impl<N> $iter<N> {
+            /// Create a new digit iterator for this value.
+            ///
+            /// Note that `n` must not be negative in order for this to work properly.
+            /// If `n` has a type which can possibly be negative, take its absolute value manually.
+            ///
+            /// Note also that the trait bounds specified here are only necessary and enforced when
+            /// compiled in debug mode. They enable a debug assertion.
+            #[cfg(debug_assertions)]
+            pub fn new(n: N) -> Self
+            where
+                N: Default + PartialOrd,
+            {
+                assert!(n >= N::default(), "n must not be negative");
+                $iter(n)
+            }
+
+            /// Create a new digit iterator for this value.
+            ///
+            /// Note that `n` must not be negative in order for this to work properly.
+            /// If `n` has a type which can possibly be negative, take its absolute value manually.
+            #[cfg(not(debug_assertions))]
             pub fn new(n: N) -> Self {
                 $iter(n)
             }
@@ -75,9 +96,107 @@ impl<N> HexIter<N> {
 
 impl_iter!(HexIter);
 
+/// Iterator over the decimal digits of a number.
+///
+/// This implementation defers to the standard `format!` macro to determine the digits of the number.
+pub struct DecIter(Vec<char>);
+
+impl DecIter {
+    /// Create iterators over the digits of a number left and right of the decimal respectively.
+    ///
+    /// Note that `n` must not be negative in order for this to work properly.
+    /// If `n` has a type which can possibly be negative, take its absolute value manually.
+    ///
+    /// This implementation defers to the standard `format!` machinery to actually encode the number
+    /// as decimal.
+    ///
+    /// The left iterator handles digits of magnitude >= 1; the right iterator handles fractional digits.
+    pub fn new<N>(n: N) -> (DecIter, Option<DecIter>)
+    where
+        N: ToString,
+    {
+        let s = n.to_string();
+        debug_assert!(s.chars().all(|c| c == '.' || ('0'..='9').contains(&c)));
+        debug_assert!(s.chars().filter(|&c| c == '.').count() <= 1);
+        let mut found_decimal = false;
+        let (left, mut right): (Vec<_>, Vec<_>) = s.chars().partition(|&c| {
+            found_decimal |= c == '.';
+            !found_decimal
+        });
+
+        // reverse so we pop in the correct sequence
+        right.reverse();
+        // eliminate the decimal from the list
+        right.pop();
+
+        let right = if right.is_empty() || right == ['0'] {
+            None
+        } else {
+            Some(DecIter(right))
+        };
+        (DecIter(left), right)
+    }
+}
+
+impl Iterator for DecIter {
+    type Item = char;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.pop()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     macro_rules! suite_for {
+        (dec: int $( $type_int:ident ),+ ; float $( $type_float:ident ),+ ) => {
+            #[allow(non_snake_case)]
+            mod DecIter {
+                use super::super::DecIter as Iter;
+                use std::convert::TryInto;
+
+                $(
+                    #[test]
+                    fn $type_int() {
+                        // don't check 0: that needs special casing for all these impls
+                        for n in 1..=$type_int::MAX.min(1024.try_into().unwrap_or($type_int::MAX)) {
+                            let expect = format!("{}", n);
+                            let (left, right) = Iter::new(n);
+                            assert!(right.is_none(), "ints should not have a fractional part");
+
+                            let mut digits: Vec<_> = left.map(|d| d.to_string()).collect();
+                            digits.reverse();
+                            let actual = digits.join("");
+                            dbg!(&actual, &expect);
+                            assert_eq!(actual, expect);
+                        }
+                    }
+                )+
+
+                $(
+                    #[test]
+                    fn $type_float() {
+                        // don't check 0: that needs special casing for all these impls
+                        for n in 1..=1024 {
+                            let n = n as $type_float / 20.0;
+                            let expect = format!("{}", n);
+                            let (left, right) = Iter::new(n);
+
+                            let mut actual: Vec<_> = left.map(|d| d.to_string()).collect();
+                            actual.reverse();
+                            if let Some(right) = right {
+                                actual.push('.'.into());
+                                actual.extend(right.map(|d| d.to_string()));
+                            }
+
+                            let actual = actual.join("");
+                            dbg!(&actual, &expect);
+                            assert_eq!(actual, expect);
+                        }
+                    }
+                )+
+            }
+        };
         ($iter:ident, $fmt:literal, $( $test_type:ident ),+) => {
             #[allow(non_snake_case)]
             mod $iter {
@@ -108,4 +227,5 @@ mod tests {
     suite_for!(BinIter, "{:b}", u8, u16, u32, u64, u128, usize, i16, i32, i64, i128, isize);
     suite_for!(OctIter, "{:o}", u8, u16, u32, u64, u128, usize, i16, i32, i64, i128, isize);
     suite_for!(HexIter, "{:x}", u8, u16, u32, u64, u128, usize, i16, i32, i64, i128, isize);
+    suite_for!(dec: int u8, u16, u32, u64, u128, usize, i16, i32, i64, i128, isize; float f32, f64);
 }

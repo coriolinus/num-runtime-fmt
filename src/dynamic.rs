@@ -13,6 +13,7 @@ impl Dynamic {
     /// it's possible to use both bare numbers and `None`:
     ///
     /// ```rust
+    /// # use num_runtime_fmt::Dynamic;
     /// Dynamic::new(5, 3, None);
     /// ```
     pub fn new<W, P, S>(width: W, precision: P, spacing: S) -> Dynamic

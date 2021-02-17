@@ -1,4 +1,6 @@
-use super::{Align, Base, Builder, Dynamic, Sign};
+use crate::{Align, Base, Builder, Dynamic, Numeric, Sign};
+use iterext::prelude::*;
+use std::collections::VecDeque;
 
 /// Formatter for numbers.
 #[derive(Clone, PartialEq, Eq, Debug, Default)]
@@ -23,7 +25,11 @@ impl NumFmt {
     }
 
     /// Format the provided number according to this configuration.
-    pub fn fmt<N>(&self, number: N) -> String {
+    ///
+    /// Will return `None` in the event that the requested format is incompatible with
+    /// the number provided. This is most often the case when the number is not an
+    /// integer but an integer format such as `b`, `o`, or `x` is requested.
+    pub fn fmt<N: Numeric>(&self, number: N) -> Option<String> {
         self.fmt_with(number, Dynamic::default())
     }
 
@@ -32,12 +38,108 @@ impl NumFmt {
     /// Note that dynamic parameters always override the formatter's parameters:
     ///
     /// ```rust
+    /// # use num_runtime_fmt::{NumFmt, Dynamic};
     /// let fmt = NumFmt::from_str("#04x_2").unwrap();
     /// assert_eq!(fmt.fmt(0), "0x00");
     /// assert_eq!(fmt.fmt_with(0, Dynamic::width(4)), "0x00_00");
     /// ```
-    pub fn fmt_with<N>(&self, number: N, dynamic: Dynamic) -> String {
-        unimplemented!()
+    ///
+    /// Will return `None` in the event that the requested format is incompatible with
+    /// the number provided. This is most often the case when the number is not an
+    /// integer but an integer format such as `b`, `o`, or `x` is requested.
+    pub fn fmt_with<N: Numeric>(&self, number: N, dynamic: Dynamic) -> Option<String> {
+        let negative = number.is_negative() && self.base() == Base::Decimal;
+        let separator = self.separator();
+        let spacing = self.spacing_with(dynamic);
+
+        // core formatting: construct a reversed queue of digits, with separator and decimal
+        // decimal is the index of the decimal point
+        let (digits, decimal_pos): (VecDeque<_>, Option<usize>) = match self.base() {
+            Base::Binary => (number.binary()?.separate(separator, spacing), None),
+            Base::Octal => (number.octal()?.separate(separator, spacing), None),
+            Base::Decimal => {
+                let (left, right) = number.decimal();
+                let mut dq: VecDeque<_> = left.separate(separator, spacing);
+                let decimal = dq.len();
+                if let Some(right) = right {
+                    dq.push_front(self.decimal_separator());
+
+                    let mut past_decimal: Box<dyn Iterator<Item = char>> = Box::new(right);
+                    if let Some(precision) = self.precision_with(dynamic) {
+                        past_decimal =
+                            Box::new(past_decimal.chain(std::iter::repeat('0')).take(precision));
+                    }
+
+                    // .extend only pushes to the back
+                    for item in past_decimal {
+                        dq.push_front(item);
+                    }
+                }
+                (dq, Some(decimal))
+            }
+            Base::LowerHex => (number.hex()?.separate(separator, spacing), None),
+            Base::UpperHex => (
+                number
+                    .hex()?
+                    .map(|ch| ch.to_ascii_uppercase())
+                    .separate(separator, spacing),
+                None,
+            ),
+        };
+        let decimal_pos = decimal_pos.unwrap_or_else(|| digits.len());
+
+        let width_used = digits.len();
+        let width_desired = self.width_with(dynamic);
+        let (mut padding_front, padding_rear) = match self.align() {
+            Align::Right => (width_desired.saturating_sub(width_used), 0),
+            Align::Left => (0, width_desired.saturating_sub(width_used)),
+            Align::Center => {
+                let unused_width = width_desired.saturating_sub(width_used);
+                let half_unused_width = unused_width / 2;
+                // bias right
+                (unused_width - half_unused_width, half_unused_width)
+            }
+            Align::Decimal => (width_desired.saturating_sub(decimal_pos), 0),
+        };
+
+        let sign_char = match (self.sign(), negative) {
+            (Sign::PlusAndMinus, _) => Some(if negative { '-' } else { '+' }),
+            (Sign::OnlyMinus, true) => Some('-'),
+            (Sign::OnlyMinus, false) => None,
+        };
+        if sign_char.is_some() && self.include_sign_in_width {
+            padding_front = padding_front.saturating_sub(1);
+        }
+
+        let prefix = match (self.hash(), self.base()) {
+            (false, _) => None,
+            (_, Base::Binary) => Some("0b"),
+            (_, Base::Octal) => Some("0o"),
+            (_, Base::Decimal) => Some("0d"),
+            (_, Base::LowerHex) | (_, Base::UpperHex) => Some("0x"),
+        };
+
+        // constant 3 ensures that even with a sign and a prefix, we don't have to reallocate
+        let mut rendered = String::with_capacity(padding_front + padding_rear + width_used + 3);
+
+        // finally, assemble all the ingredients
+        if let Some(sign) = sign_char {
+            rendered.push(sign);
+        }
+        if let Some(prefix) = prefix {
+            rendered.push_str(prefix);
+        }
+        for _ in 0..padding_front {
+            rendered.push(self.fill());
+        }
+        for digit in digits.into_iter().rev() {
+            rendered.push(digit);
+        }
+        for _ in 0..padding_rear {
+            rendered.push(self.fill());
+        }
+
+        Some(rendered)
     }
 
     /// `char` used to pad the extra space when the rendered number is smaller than the `width`.

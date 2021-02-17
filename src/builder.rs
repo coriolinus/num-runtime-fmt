@@ -56,16 +56,17 @@ impl Builder {
     /// with this character.
     ///
     /// ## Note
-    ///  Wide characters are counted according to their bit width, not their quantity.
+    ///  Wide characters are counted according to their quantity, not their bit width.
     ///
     /// ```rust
+    /// # use num_runtime_fmt::NumFmt;
     /// let heart = '🖤';
     /// assert_eq!(heart.len_utf8(), 4);
-    /// let fmt = NumFmt::builder().fill(heart).width(6).build();
-    /// // Note that this renders as two characters: we requested a width of 6.
-    /// // The number renders as a single character. The heart fills up the next 4 for a total of 5.
-    /// // Adding an extra heart would exceed the requested width, so it only renders one.
-    /// assert_eq!(fmt.fmt(1), "🖤1");
+    /// let fmt = NumFmt::builder().fill(heart).width(3).build();
+    /// let formatted = fmt.fmt(1).unwrap();
+    /// assert_eq!(formatted, "🖤🖤1");
+    /// // Note that even though we requested a width of 3, the binary length is 9.
+    /// assert_eq!(formatted.len(), 9);
     /// ```
     #[inline]
     pub fn fill(mut self, param: char) -> Self {
@@ -111,6 +112,7 @@ impl Builder {
     /// with a caveat:
     ///
     /// ```rust
+    /// # use num_runtime_fmt::NumFmt;
     /// assert_eq!(NumFmt::from_str("-03").unwrap().fmt(-1), "-01");
     /// assert_eq!(NumFmt::from_str("0>-3").unwrap().fmt(-1), "-001");
     /// ```
@@ -140,6 +142,7 @@ impl Builder {
     /// The width can be set dynamically:
     ///
     /// ```rust
+    /// # use num_runtime_fmt::{NumFmt, Dynamic};
     /// assert_eq!(NumFmt::from_str("-^$").unwrap().fmt_with(1, Dynamic::width(5)), "--1--");
     /// ```
     #[inline]
@@ -158,6 +161,7 @@ impl Builder {
     /// digits past the decimal as the underlying type naturally returns.
     ///
     /// ```rust
+    /// # use num_runtime_fmt::{NumFmt, Dynamic};
     /// assert_eq!(NumFmt::from_str("|^.$").unwrap().fmt_with(1, Dynamic::precision(5)), "|0.3|");
     /// ```
     ///
@@ -165,6 +169,7 @@ impl Builder {
     /// the remainder is always filled with `'0'`, even if `fill` is specified:
     ///
     /// ```rust
+    /// # use num_runtime_fmt::NumFmt;
     /// assert_eq!(NumFmt::from_str("-<6.2").unwrap().fmt(1), "1.00--");
     /// ```
     #[inline]

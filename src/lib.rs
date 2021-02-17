@@ -3,6 +3,7 @@ mod base;
 mod builder;
 mod dynamic;
 mod num_fmt;
+pub mod numeric_trait;
 mod sign;
 
 pub use align::Align;

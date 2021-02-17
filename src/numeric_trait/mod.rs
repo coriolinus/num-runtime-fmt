@@ -1,4 +1,5 @@
 mod default_upper_hex;
+pub mod impls;
 
 pub use default_upper_hex::DefaultUpperHex;
 

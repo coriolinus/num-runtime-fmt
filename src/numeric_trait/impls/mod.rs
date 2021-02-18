@@ -141,7 +141,7 @@ impl Iterator for DecIter {
 }
 
 macro_rules! impl_for {
-    (integer $type:ident) => {
+    (unsigned_int $type:ident) => {
         mod $type {
             use super::{BinIter, DecIter, HexIter, OctIter};
             use crate::Numeric;
@@ -171,6 +171,40 @@ macro_rules! impl_for {
 
                 fn is_negative(&self) -> bool {
                     false
+                }
+            }
+        }
+    };
+    (signed_int $type:ident) => {
+        mod $type {
+            use super::{BinIter, DecIter, HexIter, OctIter};
+            use crate::Numeric;
+
+            impl Numeric for $type {
+                type BinIter = BinIter<$type>;
+                type OctIter = OctIter<$type>;
+                type DecLeftIter = DecIter;
+                type DecRightIter = DecIter;
+                type HexIter = HexIter<$type>;
+
+                fn binary(&self) -> Option<Self::BinIter> {
+                    Some(BinIter::new(*self))
+                }
+
+                fn octal(&self) -> Option<Self::OctIter> {
+                    Some(OctIter::new(*self))
+                }
+
+                fn hex(&self) -> Option<Self::HexIter> {
+                    Some(HexIter::new(*self))
+                }
+
+                fn decimal(&self) -> (Self::DecLeftIter, Option<Self::DecRightIter>) {
+                    DecIter::new(self.abs())
+                }
+
+                fn is_negative(&self) -> bool {
+                    *self < 0
                 }
             }
         }
@@ -212,18 +246,18 @@ macro_rules! impl_for {
     };
 }
 
-impl_for!(integer u8);
-impl_for!(integer u16);
-impl_for!(integer u32);
-impl_for!(integer u64);
-impl_for!(integer u128);
-impl_for!(integer usize);
+impl_for!(unsigned_int u8);
+impl_for!(unsigned_int u16);
+impl_for!(unsigned_int u32);
+impl_for!(unsigned_int u64);
+impl_for!(unsigned_int u128);
+impl_for!(unsigned_int usize);
 // TODO: impl for i8
-impl_for!(integer i16);
-impl_for!(integer i32);
-impl_for!(integer i64);
-impl_for!(integer i128);
-impl_for!(integer isize);
+impl_for!(signed_int i16);
+impl_for!(signed_int i32);
+impl_for!(signed_int i64);
+impl_for!(signed_int i128);
+impl_for!(signed_int isize);
 impl_for!(float f32);
 impl_for!(float f64);
 

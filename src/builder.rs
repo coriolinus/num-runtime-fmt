@@ -56,7 +56,7 @@ impl Builder {
     /// with this character.
     ///
     /// ## Note
-    ///  Wide characters are counted according to their quantity, not their bit width.
+    /// Wide characters are counted according to their quantity, not their bit width.
     ///
     /// ```rust
     /// # use num_runtime_fmt::NumFmt;
@@ -113,8 +113,8 @@ impl Builder {
     ///
     /// ```rust
     /// # use num_runtime_fmt::NumFmt;
-    /// assert_eq!(NumFmt::from_str("-03").unwrap().fmt(-1), "-01");
-    /// assert_eq!(NumFmt::from_str("0>-3").unwrap().fmt(-1), "-001");
+    /// assert_eq!(NumFmt::from_str("-03").unwrap().fmt(-1).unwrap(), "-01");
+    /// assert_eq!(NumFmt::from_str("0>-3").unwrap().fmt(-1).unwrap(), "-001");
     /// ```
     ///
     /// The distinction is that the `0` handler includes the number's sign in the
@@ -143,7 +143,7 @@ impl Builder {
     ///
     /// ```rust
     /// # use num_runtime_fmt::{NumFmt, Dynamic};
-    /// assert_eq!(NumFmt::from_str("-^$").unwrap().fmt_with(1, Dynamic::width(5)), "--1--");
+    /// assert_eq!(NumFmt::from_str("-^").unwrap().fmt_with(1, Dynamic::width(5)).unwrap(), "--1--");
     /// ```
     #[inline]
     pub fn width(mut self, param: usize) -> Self {
@@ -162,7 +162,8 @@ impl Builder {
     ///
     /// ```rust
     /// # use num_runtime_fmt::{NumFmt, Dynamic};
-    /// assert_eq!(NumFmt::from_str("|^.$").unwrap().fmt_with(1, Dynamic::precision(5)), "|0.3|");
+    /// assert_eq!(NumFmt::from_str(".2").unwrap().fmt(3.14159).unwrap(), "3.14");
+    /// assert_eq!(NumFmt::from_str(".7").unwrap().fmt(3.14159).unwrap(), "3.1415900");
     /// ```
     ///
     /// If the requested precision exceeds the native precision available to this number,
@@ -170,7 +171,7 @@ impl Builder {
     ///
     /// ```rust
     /// # use num_runtime_fmt::NumFmt;
-    /// assert_eq!(NumFmt::from_str("-<6.2").unwrap().fmt(1), "1.00--");
+    /// assert_eq!(NumFmt::from_str("-<6.2").unwrap().fmt(1.0_f32).unwrap(), "1.00--");
     /// ```
     #[inline]
     pub fn precision(mut self, param: Option<usize>) -> Self {

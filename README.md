@@ -71,13 +71,16 @@ format_spec := [[fill]align][sign]['#'][['0']width]['.' precision][format][separ
 fill := character
 align := '<' | '^' | '>' | 'v'
 sign := '+' | '-'
-width := count
-precision := count
+width := integer not beginning with '0'
+precision := integer
 format := 'b' | 'o' | 'd' | 'x' | 'X'
 separator := '_', | ',' | ' '
-spacing := count
-count := '$' | integer
+spacing := integer
 ```
+
+> **Note**: there is no special syntax for dynamic insertion of `with`, `precision` and `spacing`.
+> Simply use `NumFmt::format_with`; the dynamic values there always override any values for those
+> fields, whether set or unset in the format string.
 
 ### `fill`
 

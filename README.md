@@ -4,10 +4,6 @@ Format numbers according to runtime specifications.
 
 [![Build and Test Status](https://github.com/coriolinus/num-runtime-fmt/workflows/Build%20and%20Test/badge.svg?branch=main)](https://github.com/coriolinus/num-runtime-fmt/actions?query=branch%3Amain+workflow%3A%22Build+and+Test%22)
 
-> **Note**: This crate is currently under development. This document currently
-> serves more as a development guideline than as an accurate description of
-> capabilities.
-
 ## Why another numeric formatting crate?
 
 This crate implements numeric formatting with a combination of properties not

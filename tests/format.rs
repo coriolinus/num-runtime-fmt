@@ -159,6 +159,9 @@ test_mod! { precision:
     truncate(".2", 3.14159, "3.14");
     extend(".7", 3.14159, "3.1415900");
 
+    dyn_truncate("", Dynamic::precision(2), 3.14159, "3.14");
+    dyn_extend("", Dynamic::precision(7), 3.14159, "3.1415900");
+
     with_width("5.3", 1.2, "1.200");
     width_extend("7.3", 1.2, "  1.200");
     fill_extend("|^7.3", 1.2, "|1.200|");

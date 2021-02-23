@@ -149,6 +149,11 @@ test_mod! { width:
     default_align_neg_int("5", -1, "   -1");
     default_align_pos_float("5", 1.1, "  1.1");
     default_align_neg_float("5", -1.1, " -1.1");
+
+    dyn_default_align_pos_int("", Dynamic::width(5), 1, "    1");
+    dyn_default_align_neg_int("", Dynamic::width(5), -1, "   -1");
+    dyn_default_align_pos_float("", Dynamic::width(5), 1.1, "  1.1");
+    dyn_default_align_neg_float("", Dynamic::width(5), -1.1, " -1.1");
 }
 
 test_mod! { precision:

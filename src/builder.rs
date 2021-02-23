@@ -118,8 +118,8 @@ impl Builder {
     /// ```rust
     /// # use num_runtime_fmt::NumFmt;
     /// // sign handling
-    /// assert_eq!(NumFmt::from_str("-03").unwrap().fmt(-1).unwrap(),   "-01");
-    /// assert_eq!(NumFmt::from_str("0>-3").unwrap().fmt(-1).unwrap(), "-001");
+    /// assert_eq!(NumFmt::from_str("03").unwrap().fmt(-1).unwrap(),  "-01");
+    /// assert_eq!(NumFmt::from_str("0>3").unwrap().fmt(-1).unwrap(), "0-1");
     /// ```
     ///
     /// ```rust

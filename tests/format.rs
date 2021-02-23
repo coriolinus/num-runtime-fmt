@@ -138,3 +138,15 @@ test_mod! { zero:
     fmt_fail left_pos_float("<05", 1.1, Error::IncompatibleAlignment);
     fmt_fail left_neg_float("<05", -1.1, Error::IncompatibleAlignment);
 }
+
+test_mod! { width:
+    narrow_noop_pos_int("1", 123, "123");
+    narrow_noop_neg_int("1", -123, "-123");
+    narrow_noop_pos_float("1", 1.3, "1.3");
+    narrow_noop_neg_float("1", -1.3, "-1.3");
+
+    default_align_pos_int("5", 1, "    1");
+    default_align_neg_int("5", -1, "   -1");
+    default_align_pos_float("5", 1.1, "  1.1");
+    default_align_neg_float("5", -1.1, " -1.1");
+}

@@ -248,7 +248,7 @@ impl NumFmt {
             (Sign::OnlyMinus, true) => Some('-'),
             (Sign::OnlyMinus, false) => None,
         };
-        if sign_char.is_some() && self.zero {
+        if sign_char.is_some() {
             padding_front = padding_front.saturating_sub(1);
             if !digits.is_empty() {
                 let back = *digits.back().expect("known not to be empty");
@@ -273,15 +273,30 @@ impl NumFmt {
         let mut rendered = String::with_capacity(padding_front + padding_rear + width_used + 3);
 
         // finally, assemble all the ingredients
+        //
+        // the actual ordering depends on the configuration of `self.zero`:
+        // when `true`, it's sign -> prefix -> padding;
+        // when `false`, it's padding -> sign -> prefix
+
+        if !self.zero {
+            for _ in 0..padding_front {
+                rendered.push(self.fill());
+            }
+        }
+
         if let Some(sign) = sign_char {
             rendered.push(sign);
         }
         if let Some(prefix) = prefix {
             rendered.push_str(prefix);
         }
-        for _ in 0..padding_front {
-            rendered.push(self.fill());
+
+        if self.zero {
+            for _ in 0..padding_front {
+                rendered.push(self.fill());
+            }
         }
+
         for digit in digits.into_iter().rev() {
             rendered.push(digit);
         }

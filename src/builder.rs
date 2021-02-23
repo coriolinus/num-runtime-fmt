@@ -111,13 +111,15 @@ impl Builder {
     /// treats pad characters as part of the number, in contrast
     /// to the default behavior which treats them as arbitrary spacing.
     ///
+    /// Only valid with `Align::Right` and `Align::Decimal`.
+    ///
     /// ## Examples
     ///
     /// ```rust
     /// # use num_runtime_fmt::NumFmt;
     /// // sign handling
-    /// assert_eq!(NumFmt::from_str("-03").unwrap().fmt(-1).unwrap(),   "-01");
-    /// assert_eq!(NumFmt::from_str("0>-3").unwrap().fmt(-1).unwrap(), "-001");
+    /// assert_eq!(NumFmt::from_str("03").unwrap().fmt(-1).unwrap(),  "-01");
+    /// assert_eq!(NumFmt::from_str("0>3").unwrap().fmt(-1).unwrap(), "0-1");
     /// ```
     ///
     /// ```rust
@@ -150,6 +152,17 @@ impl Builder {
     /// ```rust
     /// # use num_runtime_fmt::{NumFmt, Dynamic};
     /// assert_eq!(NumFmt::from_str("-^").unwrap().fmt_with(1, Dynamic::width(5)).unwrap(), "--1--");
+    /// ```
+    ///
+    /// Note: with `Align::Right`, this is the minimum width of the entire rendered field,
+    /// not just the portion before the decimal. To set the width before the decimal,
+    /// use `Align::Decimal`.
+    ///
+    /// ```rust
+    /// # use num_runtime_fmt::{NumFmt, Dynamic};
+    /// assert_eq!(NumFmt::from_str( "05").unwrap().fmt(1.1).unwrap(),   "001.1");
+    /// assert_eq!(NumFmt::from_str(">05").unwrap().fmt(1.1).unwrap(),   "001.1");
+    /// assert_eq!(NumFmt::from_str("v05").unwrap().fmt(1.1).unwrap(), "00001.1");
     /// ```
     #[inline]
     pub fn width(mut self, param: usize) -> Self {

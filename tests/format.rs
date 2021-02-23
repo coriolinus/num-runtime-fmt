@@ -1,5 +1,4 @@
-#[allow(unused)]
-use num_runtime_fmt::{Dynamic, Error, NumFmt, Numeric};
+use num_runtime_fmt::{Dynamic, Error, NumFmt};
 
 macro_rules! test_mod {
     // module name
@@ -178,4 +177,47 @@ test_mod! { base:
     fmt_fail octal_float("04o", 0.0, Error::NotImplemented(_, _));
     fmt_fail lower_hex_float("x", 0.0, Error::NotImplemented(_, _));
     fmt_fail upper_hex_float("X", 0.0, Error::NotImplemented(_, _));
+}
+
+test_mod! { separator:
+    not_separated("", 123456789, "123456789");
+    comma(",", 123456789, "123,456,789");
+    space(" ", 123456789, "123 456 789");
+    under("_", 123456789, "123_456_789");
+
+    comma_float(",", 123456789.0, "123,456,789");
+    space_float(" ", 123456789.0, "123 456 789");
+    under_float("_", 123456789.0, "123_456_789");
+
+    // TODO: do we _want_ post-decimal commas? Those feel weird to me somehow.
+    only_pre_decimal(".9,", 123456789.87654321, "123,456,789.876543210");
+}
+
+test_mod! { spacing:
+    comma(",1", 123456789, "1,2,3,4,5,6,7,8,9");
+    space(" 2", 123456789, "1 23 45 67 89");
+    under("_3", 123456789, "123_456_789");
+
+    comma_float(",4", 123456789.0, "1,2345,6789");
+    space_float(" 5", 123456789.0, "1234 56789");
+    under_float("_6", 123456789.0, "123_456789");
+
+    // TODO: do we _want_ post-decimal commas? Those feel weird to me somehow.
+    only_pre_decimal(".9,7", 123456789.87654321, "12,3456789.876543210");
+}
+
+mod misc {
+    //! some tests don't really fit elsewhere
+
+    use super::*;
+    #[test]
+    fn german_style() {
+        let fmt = NumFmt::builder()
+            .separator(Some('.'))
+            .decimal_separator(',')
+            .precision(Some(2))
+            .build();
+        let have = fmt.fmt(12345).unwrap();
+        assert_eq!(have, "12.345,00");
+    }
 }

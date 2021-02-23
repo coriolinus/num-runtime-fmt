@@ -150,3 +150,15 @@ test_mod! { width:
     default_align_pos_float("5", 1.1, "  1.1");
     default_align_neg_float("5", -1.1, " -1.1");
 }
+
+test_mod! { precision:
+    truncate(".2", 3.14159, "3.14");
+    extend(".7", 3.14159, "3.1415900");
+
+    with_width("5.3", 1.2, "1.200");
+    width_extend("7.3", 1.2, "  1.200");
+    fill_extend("|^7.3", 1.2, "|1.200|");
+    decimal("v7.3", 1.2, "      1.200");
+    zero_dec("v05.3", 1.2, "00001.200");
+    left("<7.3", 1.2, "1.200  ");
+}

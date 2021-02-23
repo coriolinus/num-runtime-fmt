@@ -11,13 +11,13 @@ macro_rules! test_mod {
         }
     };
     // non-dynamic test format error
-    (funcs fmt_fail $test_name:ident($fmt:expr, $num:expr, $want:expr); $( $rest:tt )*) => {
+    (funcs fmt_fail $test_name:ident($fmt:expr, $num:expr, $want:pat); $( $rest:tt )*) => {
         #[test]
         fn $test_name() {
             let fmt = NumFmt::from_str($fmt).expect("must parse expected format");
             dbg!(&fmt);
             let result = fmt.fmt($num).unwrap_err();
-            assert_eq!(result, $want);
+            assert!(matches!(result, $want));
         }
 
         test_mod!(funcs $( $rest )* );
@@ -161,4 +161,16 @@ test_mod! { precision:
     decimal("v7.3", 1.2, "      1.200");
     zero_dec("v05.3", 1.2, "00001.200");
     left("<7.3", 1.2, "1.200  ");
+}
+
+test_mod! { base:
+    binary("09b_4", 0b1101, "0000_1101");
+    octal("04o", 0o644, "0644");
+    lower_hex("x", 0xcafebabe_u32, "cafebabe");
+    upper_hex("X", 0xDEADBEEF_u32, "DEADBEEF");
+
+    fmt_fail binary_float("09b_4", 0.0, Error::NotImplemented(_, _));
+    fmt_fail octal_float("04o", 0.0, Error::NotImplemented(_, _));
+    fmt_fail lower_hex_float("x", 0.0, Error::NotImplemented(_, _));
+    fmt_fail upper_hex_float("X", 0.0, Error::NotImplemented(_, _));
 }

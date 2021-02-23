@@ -4,9 +4,22 @@ version = "0.1.0"
 authors = ["Peter Goodspeed-Niklaus <peter.r.goodspeedniklaus@gmail.com>"]
 edition = "2018"
 license = "GPL-3.0-only"
+description = "Format numbers according to a format spec determined at runtime."
+repository = "https://github.com/coriolinus/num-runtime-fmt"
+categories = [
+    "mathematics",
+    "rust-patterns",
+    "value-formatting",
+]
+keywords = [
+    "numeric",
+    "runtime",
+    "format",
+    "formatting",
+]
 
 [dependencies]
-iterext = { git = "https://github.com/coriolinus/iterext.git", branch = "main" }
+iterext = "0.1.0"
 lazy_static = "1.4.0"
 regex = "1.4.3"
 thiserror = "1.0.23"

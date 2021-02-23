@@ -133,18 +133,25 @@ assert_eq!(NumFmt::from_str("#04b").unwrap().fmt(2), "0b10");
 
 ### `0`
 
-Conceptually, this is similar to the common pattern `0>`; it saves a
-char, and looks better when combined with a sign specifier. However, it comes
-with a caveat:
+Engage the zero handler.
+
+The zero handler overrides the padding specification to `0`, and
+treats pad characters as part of the number, in contrast
+to the default behavior which treats them as arbitrary spacing.
+
+## Examples
 
 ```rust
-assert_eq!(NumFmt::from_str("-03").unwrap().fmt(-1), "-01");
-assert_eq!(NumFmt::from_str("0>-3").unwrap().fmt(-1), "-001");
+// sign handling
+assert_eq!(NumFmt::from_str("-03").unwrap().fmt(-1).unwrap(),   "-01");
+assert_eq!(NumFmt::from_str("0>-3").unwrap().fmt(-1).unwrap(), "-001");
 ```
 
-The distinction is that the `0` formatter includes the number's sign in the
-desired width; an explicit fill does not include the sign in the width
-calculation.
+```rust
+// separator handling
+assert_eq!(NumFmt::from_str("0>7,").fmt(1).unwrap(), "0000001");
+assert_eq!(NumFmt::from_str("07,").fmt(1).unwrap(),  "000,001");
+```
 
 ### `width`
 

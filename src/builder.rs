@@ -7,7 +7,7 @@ pub struct Builder {
     align: Align,
     sign: Sign,
     hash: bool,
-    include_sign_in_width: bool,
+    zero: bool,
     width: usize,
     precision: Option<usize>,
     format: Base,
@@ -29,7 +29,7 @@ impl Builder {
             align,
             sign,
             hash,
-            include_sign_in_width,
+            zero,
             width,
             precision,
             format,
@@ -42,7 +42,7 @@ impl Builder {
             align,
             sign,
             hash,
-            include_sign_in_width,
+            zero,
             width,
             precision,
             base: format,
@@ -107,27 +107,33 @@ impl Builder {
 
     /// If `set`, engage the zero handler.
     ///
-    /// Conceptually, this is similar to the common pattern `0>`; it saves a
-    /// char, and looks better when combined with a sign specifier. However, it comes
-    /// with a caveat:
+    /// The zero handler overrides the padding specification to `0`, and
+    /// treats pad characters as part of the number, in contrast
+    /// to the default behavior which treats them as arbitrary spacing.
+    ///
+    /// ## Examples
     ///
     /// ```rust
     /// # use num_runtime_fmt::NumFmt;
-    /// assert_eq!(NumFmt::from_str("-03").unwrap().fmt(-1).unwrap(), "-01");
+    /// // sign handling
+    /// assert_eq!(NumFmt::from_str("-03").unwrap().fmt(-1).unwrap(),   "-01");
     /// assert_eq!(NumFmt::from_str("0>-3").unwrap().fmt(-1).unwrap(), "-001");
     /// ```
     ///
-    /// The distinction is that the `0` handler includes the number's sign in the
-    /// desired width; an explicit fill does not include the sign in the width
-    /// calculation.
+    /// ```rust
+    /// # use num_runtime_fmt::NumFmt;
+    /// // separator handling
+    /// assert_eq!(NumFmt::from_str("0>7,").unwrap().fmt(1).unwrap(), "0000001");
+    /// assert_eq!(NumFmt::from_str("07,").unwrap().fmt(1).unwrap(),  "000,001");
+    /// ```
     #[inline]
     pub fn zero(mut self, set: bool) -> Self {
         if set {
             self.fill = Some('0');
-            self.include_sign_in_width = true;
+            self.zero = true;
         } else {
             self.fill = None;
-            self.include_sign_in_width = false;
+            self.zero = false;
         }
         self
     }
@@ -226,7 +232,7 @@ impl From<NumFmt> for Builder {
             align,
             sign,
             hash,
-            include_sign_in_width,
+            zero,
             width,
             precision,
             base: format,
@@ -240,7 +246,7 @@ impl From<NumFmt> for Builder {
             align,
             sign,
             hash,
-            include_sign_in_width,
+            zero,
             width,
             precision,
             format,

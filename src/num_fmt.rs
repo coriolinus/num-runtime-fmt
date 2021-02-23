@@ -47,7 +47,7 @@ pub struct NumFmt {
     pub(crate) align: Align,
     pub(crate) sign: Sign,
     pub(crate) hash: bool,
-    pub(crate) include_sign_in_width: bool,
+    pub(crate) zero: bool,
     pub(crate) width: usize,
     pub(crate) precision: Option<usize>,
     pub(crate) base: Base,
@@ -60,6 +60,41 @@ impl NumFmt {
     /// Create a [`Builder`] to customize the parameters of a `NumFmt`.
     pub fn builder() -> Builder {
         Builder::default()
+    }
+
+    #[inline]
+    fn width_desired(&self, dynamic: Dynamic) -> usize {
+        let mut width_desired = self.width_with(dynamic);
+        if self.hash() {
+            width_desired = width_desired.saturating_sub(2);
+        }
+
+        width_desired
+    }
+
+    /// normalize a digit iterator
+    ///
+    /// - ensure that the iterator returns, bare minimum, a single char (default 0)
+    /// - pad it to the desired width
+    /// - space it out to the desired spacing
+    fn normalize(&self, digits: impl Iterator<Item = char>, dynamic: Dynamic) -> VecDeque<char> {
+        let pad_to = if self.zero() {
+            self.width_desired(dynamic)
+        } else {
+            1
+        };
+        let pad_char = if self.zero() { '0' } else { self.fill() };
+
+        let mut digits = digits.peekable();
+        let digits: Box<dyn Iterator<Item = char>> = if digits.peek().is_some() {
+            Box::new(digits)
+        } else {
+            Box::new(std::iter::once('0'))
+        };
+
+        digits
+            .pad(pad_char, pad_to)
+            .separate(self.separator(), self.spacing_with(dynamic))
     }
 
     /// Format the provided number according to this configuration.
@@ -89,16 +124,15 @@ impl NumFmt {
         let negative = number.is_negative() && self.base() == Base::Decimal;
         let separator = self.separator();
         let decimal_separator = self.decimal_separator();
-        let spacing = self.spacing_with(dynamic);
 
         // core formatting: construct a reversed queue of digits, with separator and decimal
         // decimal is the index of the decimal point
-        let (digits, decimal_pos): (VecDeque<_>, Option<usize>) = match self.base() {
-            Base::Binary => (number.binary()?.separate(separator, spacing), None),
-            Base::Octal => (number.octal()?.separate(separator, spacing), None),
+        let (mut digits, decimal_pos): (VecDeque<_>, Option<usize>) = match self.base() {
+            Base::Binary => (self.normalize(number.binary()?, dynamic), None),
+            Base::Octal => (self.normalize(number.octal()?, dynamic), None),
             Base::Decimal => {
                 let (left, right) = number.decimal();
-                let mut dq: VecDeque<_> = left.separate(separator, spacing);
+                let mut dq = self.normalize(left, dynamic);
                 let decimal = dq.len();
                 let past_decimal: Option<Box<dyn Iterator<Item = char>>> =
                     match (right, self.precision_with(dynamic)) {
@@ -121,16 +155,22 @@ impl NumFmt {
                 }
                 (dq, Some(decimal))
             }
-            Base::LowerHex => (number.hex()?.separate(separator, spacing), None),
+            Base::LowerHex => (self.normalize(number.hex()?, dynamic), None),
             Base::UpperHex => (
-                number
-                    .hex()?
-                    .map(|ch| ch.to_ascii_uppercase())
-                    .separate(separator, spacing),
+                self.normalize(number.hex()?.map(|ch| ch.to_ascii_uppercase()), dynamic),
                 None,
             ),
         };
-        let decimal_pos = decimal_pos.unwrap_or_else(|| digits.len());
+        let width_desired = self.width_desired(dynamic);
+        let mut decimal_pos = decimal_pos.unwrap_or_else(|| digits.len());
+        // padding and separating can introduce extraneous leading 0 chars, so let's fix that
+        while decimal_pos > width_desired && {
+            let last = *digits.back().expect("can't be empty while decimal_pos > 0");
+            last == '0' || last == separator
+        } {
+            decimal_pos -= 1;
+            digits.pop_back();
+        }
 
         debug_assert!(
             {
@@ -155,7 +195,6 @@ impl NumFmt {
         );
 
         let width_used = digits.len();
-        let width_desired = self.width_with(dynamic);
         let (mut padding_front, padding_rear) = match self.align() {
             Align::Right => (width_desired.saturating_sub(width_used), 0),
             Align::Left => (0, width_desired.saturating_sub(width_used)),
@@ -173,8 +212,14 @@ impl NumFmt {
             (Sign::OnlyMinus, true) => Some('-'),
             (Sign::OnlyMinus, false) => None,
         };
-        if sign_char.is_some() && self.include_sign_in_width {
+        if sign_char.is_some() && self.zero {
             padding_front = padding_front.saturating_sub(1);
+            if !digits.is_empty() {
+                let back = *digits.back().expect("known not to be empty");
+                if back == '0' || back == separator {
+                    digits.pop_back();
+                }
+            }
         }
 
         let prefix = match (self.hash(), self.base()) {
@@ -291,19 +336,27 @@ impl NumFmt {
     ///
     /// ## `0`
     ///
-    /// Conceptually, this is similar to the common pattern `0>`; it saves a
-    /// char, and looks better when combined with a sign specifier. However, it comes
-    /// with a caveat:
+    /// Engage the zero handler.
+    ///
+    /// The zero handler overrides the padding specification to `0`, and
+    /// treats pad characters as part of the number, in contrast
+    /// to the default behavior which treats them as arbitrary spacing.
+    ///
+    /// ## Examples
     ///
     /// ```rust
     /// # use num_runtime_fmt::NumFmt;
-    /// assert_eq!(NumFmt::from_str("-03").unwrap().fmt(-1).unwrap(), "-01");
+    /// // sign handling
+    /// assert_eq!(NumFmt::from_str("-03").unwrap().fmt(-1).unwrap(),   "-01");
     /// assert_eq!(NumFmt::from_str("0>-3").unwrap().fmt(-1).unwrap(), "-001");
     /// ```
     ///
-    /// The distinction is that the `0` formatter includes the number's sign in the
-    /// desired width; an explicit fill does not include the sign in the width
-    /// calculation.
+    /// ```rust
+    /// # use num_runtime_fmt::NumFmt;
+    /// // separator handling
+    /// assert_eq!(NumFmt::from_str("0>7,").unwrap().fmt(1).unwrap(), "0000001");
+    /// assert_eq!(NumFmt::from_str("07,").unwrap().fmt(1).unwrap(),  "000,001");
+    /// ```
     ///
     /// ## `width`
     ///
@@ -470,7 +523,7 @@ impl NumFmt {
     /// Whether the zero formatter was used.
     #[inline]
     pub fn zero(&self) -> bool {
-        self.include_sign_in_width && self.fill() == '0'
+        self.zero && self.fill() == '0'
     }
 
     /// Requested render width in bytes.
@@ -555,5 +608,29 @@ mod tests {
                 "all valid format strings must be parsed"
             );
         }
+    }
+
+    #[test]
+    fn test_dynamic_width() {
+        let fmt = NumFmt::from_str("#04x_2").unwrap();
+        assert!(fmt.zero());
+        assert_eq!(fmt.fmt(0).unwrap(), "0x00");
+
+        let dynamic = Dynamic::width(7);
+        dbg!(
+            fmt.separator(),
+            dynamic,
+            fmt.width_with(dynamic),
+            fmt.precision_with(dynamic),
+            fmt.spacing_with(dynamic)
+        );
+
+        assert_eq!(fmt.fmt_with(0, dynamic).unwrap(), "0x00_00");
+    }
+
+    #[test]
+    fn test_separator() {
+        let fmt = NumFmt::from_str(",").unwrap();
+        assert_eq!(fmt.fmt(123_456_789).unwrap(), "123,456,789");
     }
 }

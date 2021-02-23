@@ -246,6 +246,7 @@ mod misc {
     //! some tests don't really fit elsewhere
 
     use super::*;
+
     #[test]
     fn german_style() {
         let fmt = NumFmt::builder()
@@ -255,5 +256,22 @@ mod misc {
             .build();
         let have = fmt.fmt(12345).unwrap();
         assert_eq!(have, "12.345,00");
+    }
+
+    #[test]
+    fn demo_dynamic() {
+        // this really isn't the most efficient way to build a formatter;
+        // if you know everything staticly like this, just use the builder.
+        // This test mainly demonstrates a capability that the `format!` macro doesn't have.
+        let hash = '#';
+        let width = "04";
+        let base = 'x';
+
+        let formatted = format!("{}{}{}", hash, width, base)
+            .parse::<NumFmt>()
+            .unwrap()
+            .fmt(15)
+            .unwrap();
+        assert_eq!(formatted, "0x0f");
     }
 }

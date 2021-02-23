@@ -99,14 +99,19 @@ impl NumFmt {
                 let (left, right) = number.decimal();
                 let mut dq: VecDeque<_> = left.separate(separator, spacing);
                 let decimal = dq.len();
-                if let Some(right) = right {
+                let past_decimal: Option<Box<dyn Iterator<Item = char>>> =
+                    match (right, self.precision_with(dynamic)) {
+                        (Some(digits), None) => Some(Box::new(digits)),
+                        (Some(digits), Some(precision)) => Some(Box::new(
+                            digits.chain(std::iter::repeat('0')).take(precision),
+                        )),
+                        (None, Some(precision)) => {
+                            Some(Box::new(std::iter::repeat('0').take(precision)))
+                        }
+                        (None, None) => None,
+                    };
+                if let Some(past_decimal) = past_decimal {
                     dq.push_front(self.decimal_separator());
-
-                    let mut past_decimal: Box<dyn Iterator<Item = char>> = Box::new(right);
-                    if let Some(precision) = self.precision_with(dynamic) {
-                        past_decimal =
-                            Box::new(past_decimal.chain(std::iter::repeat('0')).take(precision));
-                    }
 
                     // .extend only pushes to the back
                     for item in past_decimal {
@@ -310,16 +315,22 @@ impl NumFmt {
     ///
     /// ## `precision`
     ///
-    /// Ignored for integers.
-    ///
-    /// For non-integers, this is how many digits after the decimal point are printed.
+    /// Precision will pad or truncate as required if set. If unset, passes through as many
+    /// digits past the decimal as the underlying type naturally returns.
     ///
     /// ```rust
     /// # use num_runtime_fmt::{NumFmt, Dynamic};
-    /// assert_eq!(NumFmt::from_str("|^5").unwrap().fmt_with(0.3, Dynamic::precision(1)).unwrap(), "|0.3|");
+    /// assert_eq!(NumFmt::from_str(".2").unwrap().fmt(3.14159).unwrap(), "3.14");
+    /// assert_eq!(NumFmt::from_str(".7").unwrap().fmt(3.14159).unwrap(), "3.1415900");
     /// ```
     ///
-    /// If an explicit precision is not provided, defaults to 0.
+    /// If the requested precision exceeds the native precision available to this number,
+    /// the remainder is always filled with `'0'`, even if `fill` is specified:
+    ///
+    /// ```rust
+    /// # use num_runtime_fmt::NumFmt;
+    /// assert_eq!(NumFmt::from_str("-<6.2").unwrap().fmt(1.0_f32).unwrap(), "1.00--");
+    /// ```
     ///
     /// ## `format`
     ///
@@ -349,7 +360,7 @@ impl NumFmt {
     /// specify that numeric groups are not separated when using a format string.
     /// However, this can be specified when building the formatter via builder.
     ///
-    /// Wyhen using the builder to explicitly set formatter options, it is also possible
+    /// When using the builder to explicitly set formatter options, it is also possible
     /// to separate numeric groups with an arbitrary `char`. This can be desirable to
     /// i.e. support German number formats, which use a `.` to separate numeric groups
     /// and a `,` as a decimal separator.

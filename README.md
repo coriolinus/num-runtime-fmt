@@ -164,15 +164,23 @@ If an explicit width is not provided, defaults to 0.
 
 ### `precision`
 
-Ignored for integers.
+How many digits after the decimal point are printed. Note that integers can be forced
+to emit decimal places with this modifier.
 
-For non-integers, this is how many digits after the decimal point are printed.
+If an explicit precision is not provided, defaults to emitting all post-decimal
+digits emitted by the underlying type.
 
 ```rust
-assert_eq!(NumFmt::from_str("|^.$").unwrap().fmt_with(1, Dynamic::precision(5)), "|0.3|");
+assert_eq!(NumFmt::from_str(".2").unwrap().fmt(3.14159).unwrap(), "3.14");
+assert_eq!(NumFmt::from_str(".7").unwrap().fmt(3.14159).unwrap(), "3.1415900");
 ```
 
-If an explicit precision is not provided, defaults to 0.
+If the requested precision exceeds the native precision available to this number,
+the remainder is always filled with `'0'`, even if `fill` is specified:
+
+```rust
+assert_eq!(NumFmt::from_str("-<6.2").unwrap().fmt(1.0_f32).unwrap(), "1.00--");
+```
 
 ### `format`
 

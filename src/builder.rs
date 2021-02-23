@@ -153,9 +153,8 @@ impl Builder {
 
     /// Set the `precision` parameter.
     ///
-    /// Ignored for integers.
-    ///
-    /// For non-integers, this is how many digits after the decimal point are printed.
+    /// How many digits after the decimal point are printed. Note that integers can be forced
+    /// to emit decimal places with this modifier.
     ///
     /// Precision will pad or truncate as required if set. If unset, passes through as many
     /// digits past the decimal as the underlying type naturally returns.

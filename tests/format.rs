@@ -171,8 +171,8 @@ test_mod! { precision:
 test_mod! { base:
     binary("09b_4", 0b1101, "0000_1101");
     octal("04o", 0o644, "0644");
-    lower_hex("x", 0xcafebabe_u32, "cafebabe");
-    upper_hex("X", 0xDEADBEEF_u32, "DEADBEEF");
+    lower_hex("x 4", 0xcafebabe_u32, "cafe babe");
+    upper_hex("#X_4", 0xDEADBEEF_u32, "0xDEAD_BEEF");
 
     fmt_fail binary_float("09b_4", 0.0, Error::NotImplemented(_, _));
     fmt_fail octal_float("04o", 0.0, Error::NotImplemented(_, _));

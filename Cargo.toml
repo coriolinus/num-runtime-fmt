@@ -3,6 +3,7 @@ name = "num-runtime-fmt"
 version = "0.1.0"
 authors = ["Peter Goodspeed-Niklaus <peter.r.goodspeedniklaus@gmail.com>"]
 edition = "2018"
+license = "GPL-3.0-only"
 
 [dependencies]
 iterext = { git = "https://github.com/coriolinus/iterext.git", branch = "main" }

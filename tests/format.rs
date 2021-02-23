@@ -206,6 +206,31 @@ test_mod! { spacing:
     only_pre_decimal(".9,7", 123456789.87654321, "12,3456789.876543210");
 }
 
+mod only_spacing {
+    //! Default sepator is a comma. We can't say that in the parser, but we can build it.
+    use super::*;
+    use num_runtime_fmt::Base;
+
+    #[test]
+    fn two() {
+        let fmt = NumFmt::builder().spacing(2).base(Base::LowerHex).build();
+        let have = fmt.fmt(0x12_34_56_78_u32).unwrap();
+        assert_eq!(have, "12,34,56,78");
+    }
+
+    #[test]
+    fn four() {
+        let fmt = NumFmt::builder()
+            .spacing(4)
+            .base(Base::Binary)
+            .zero(true)
+            .width(9)
+            .build();
+        let have = fmt.fmt(0b0110_1110).unwrap();
+        assert_eq!(have, "0110,1110");
+    }
+}
+
 mod misc {
     //! some tests don't really fit elsewhere
 

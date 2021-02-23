@@ -45,6 +45,9 @@ impl NumFmt {
         if self.hash() {
             width_desired = width_desired.saturating_sub(2);
         }
+        if width_desired == 0 {
+            width_desired = 1;
+        }
 
         width_desired
     }
@@ -60,6 +63,7 @@ impl NumFmt {
         } else {
             1
         };
+
         let pad_char = if self.zero() { '0' } else { self.fill() };
 
         let mut digits = digits.peekable();

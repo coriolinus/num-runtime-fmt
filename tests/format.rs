@@ -110,8 +110,8 @@ test_mod! { hash:
 }
 
 test_mod! { zero:
-    unused_int("0", 1, "1");
-    unnused_float("0", 1.1, "1.1");
+    unused_int("01", 1, "1");
+    unnused_float("01", 1.1, "1.1");
 
     bare_pos_int("05", 1, "00001");
     bare_neg_int("05", -1, "-0001");

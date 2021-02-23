@@ -55,22 +55,26 @@ impl NumFmt {
         let pad_char = if self.zero() { '0' } else { self.fill() };
 
         let mut digits = digits.peekable();
-        let digits: Box<dyn Iterator<Item = char>> = if digits.peek().is_some() {
+        let mut digits: Box<dyn Iterator<Item = char>> = if digits.peek().is_some() {
             Box::new(digits)
         } else {
             Box::new(std::iter::once('0'))
         };
 
-        digits
-            .pad(pad_char, pad_to)
-            .separate(self.separator(), self.spacing_with(dynamic))
+        digits = Box::new(digits.pad(pad_char, pad_to));
+
+        if let Some((separator, spacing)) = self.separator_and_spacing_with(dynamic) {
+            digits.separate(separator, spacing)
+        } else {
+            digits.collect()
+        }
     }
 
     /// Format the provided number according to this configuration.
     ///
-    /// Will return `None` in the event that the requested format is incompatible with
+    /// Will return `None` in the event that the configured format is incompatible with
     /// the number provided. This is most often the case when the number is not an
-    /// integer but an integer format such as `b`, `o`, or `x` is requested.
+    /// integer but an integer format such as `b`, `o`, or `x` is configured.
     pub fn fmt<N: Numeric>(&self, number: N) -> Option<String> {
         self.fmt_with(number, Dynamic::default())
     }
@@ -86,13 +90,20 @@ impl NumFmt {
     /// assert_eq!(fmt.fmt_with(0, Dynamic::width(7)).unwrap(), "0x00_00");
     /// ```
     ///
-    /// Will return `None` in the event that the requested format is incompatible with
+    /// Will return `None` in the event that the configured format is incompatible with
     /// the number provided. This is most often the case when the number is not an
-    /// integer but an integer format such as `b`, `o`, or `x` is requested.
+    /// integer but an integer format such as `b`, `o`, or `x` is configured.
     pub fn fmt_with<N: Numeric>(&self, number: N, dynamic: Dynamic) -> Option<String> {
         let negative = number.is_negative() && self.base() == Base::Decimal;
-        let separator = self.separator();
         let decimal_separator = self.decimal_separator();
+
+        // if the separator is set, returns true when it matches the provided char
+        // otherwise, always false
+        let matches_separator = |ch: char| {
+            self.separator_and_spacing_with(dynamic)
+                .map(|(separator, _)| separator == ch)
+                .unwrap_or_default()
+        };
 
         // core formatting: construct a reversed queue of digits, with separator and decimal
         // decimal is the index of the decimal point
@@ -135,7 +146,7 @@ impl NumFmt {
         // padding and separating can introduce extraneous leading 0 chars, so let's fix that
         while decimal_pos > width_desired && {
             let last = *digits.back().expect("can't be empty while decimal_pos > 0");
-            last == '0' || last == separator
+            last == '0' || matches_separator(last)
         } {
             decimal_pos -= 1;
             digits.pop_back();
@@ -145,17 +156,25 @@ impl NumFmt {
             {
                 let legal: Box<dyn Fn(&char) -> bool> = match self.base() {
                     Base::Binary => {
-                        Box::new(move |ch| *ch == separator || ('0'..='1').contains(ch))
+                        Box::new(move |ch| matches_separator(*ch) || ('0'..='1').contains(ch))
                     }
-                    Base::Octal => Box::new(move |ch| *ch == separator || ('0'..='7').contains(ch)),
+                    Base::Octal => {
+                        Box::new(move |ch| matches_separator(*ch) || ('0'..='7').contains(ch))
+                    }
                     Base::Decimal => Box::new(move |ch| {
-                        *ch == decimal_separator || *ch == separator || ('0'..='9').contains(ch)
+                        *ch == decimal_separator
+                            || matches_separator(*ch)
+                            || ('0'..='9').contains(ch)
                     }),
                     Base::LowerHex => Box::new(move |ch| {
-                        *ch == separator || ('0'..='9').contains(ch) || ('a'..='f').contains(ch)
+                        matches_separator(*ch)
+                            || ('0'..='9').contains(ch)
+                            || ('a'..='f').contains(ch)
                     }),
                     Base::UpperHex => Box::new(move |ch| {
-                        *ch == separator || ('0'..='9').contains(ch) || ('A'..='F').contains(ch)
+                        matches_separator(*ch)
+                            || ('0'..='9').contains(ch)
+                            || ('A'..='F').contains(ch)
                     }),
                 };
                 digits.iter().all(legal)
@@ -185,7 +204,7 @@ impl NumFmt {
             padding_front = padding_front.saturating_sub(1);
             if !digits.is_empty() {
                 let back = *digits.back().expect("known not to be empty");
-                if back == '0' || back == separator {
+                if back == '0' || matches_separator(back) {
                     digits.pop_back();
                 }
             }
@@ -255,13 +274,13 @@ impl NumFmt {
         self.zero && self.fill() == '0'
     }
 
-    /// Requested render width in bytes.
+    /// Configured render width in bytes.
     #[inline]
     pub fn width(&self) -> usize {
         self.width
     }
 
-    /// Requested post-decimal precision in bytes.
+    /// Configured post-decimal precision in bytes.
     ///
     /// Precision will pad or truncate as required if set. If unset, passes through as many
     /// digits past the decimal as the underlying type naturally returns.
@@ -270,25 +289,48 @@ impl NumFmt {
         self.precision
     }
 
-    /// Requested output format.
+    /// Configured output format.
     #[inline]
     pub fn base(&self) -> Base {
         self.base
     }
 
-    /// Requested group separator.
-    #[inline]
-    pub fn separator(&self) -> char {
-        self.separator.unwrap_or(',')
+    /// Configured group separator and spacing.
+    ///
+    /// If one or the other of these is set, the other will adopt
+    /// an appropriate default. However, if neither is configured, then
+    /// no group separation will be performed.
+    fn separator_and_spacing_with(&self, dynamic: Dynamic) -> Option<(char, usize)> {
+        match (self.separator, self.spacing_with(dynamic)) {
+            (Some(sep), Some(spc)) => Some((sep, spc)),
+            (Some(sep), None) => Some((sep, 3)),
+            (None, Some(spc)) => Some((',', spc)),
+            (None, None) => None,
+        }
     }
 
-    /// Requested group size.
-    #[inline]
-    pub fn spacing(&self) -> usize {
-        self.spacing.unwrap_or(3)
+    /// Configured group separator and spacing.
+    ///
+    /// If one or the other of these is set, the other will adopt
+    /// an appropriate default. However, if neither is configured, then
+    /// no group separation will be performed.
+    fn separator_and_spacing(&self) -> Option<(char, usize)> {
+        self.separator_and_spacing_with(Dynamic::default())
     }
 
-    /// Requested decimal separator.
+    /// Configured group separator.
+    #[inline]
+    pub fn separator(&self) -> Option<char> {
+        self.separator_and_spacing().map(|(separator, _)| separator)
+    }
+
+    /// Configured group size.
+    #[inline]
+    pub fn spacing(&self) -> Option<usize> {
+        self.separator_and_spacing().map(|(_, spacing)| spacing)
+    }
+
+    /// Configured decimal separator.
     #[inline]
     pub fn decimal_separator(&self) -> char {
         self.decimal_separator.unwrap_or('.')
@@ -302,8 +344,8 @@ impl NumFmt {
         dynamic.precision.or(self.precision)
     }
 
-    fn spacing_with(&self, dynamic: Dynamic) -> usize {
-        dynamic.spacing.unwrap_or_else(|| self.spacing())
+    fn spacing_with(&self, dynamic: Dynamic) -> Option<usize> {
+        dynamic.spacing.or(self.spacing)
     }
 }
 

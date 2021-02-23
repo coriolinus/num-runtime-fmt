@@ -111,6 +111,8 @@ impl Builder {
     /// treats pad characters as part of the number, in contrast
     /// to the default behavior which treats them as arbitrary spacing.
     ///
+    /// Only valid with `Align::Right` and `Align::Decimal`.
+    ///
     /// ## Examples
     ///
     /// ```rust

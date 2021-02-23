@@ -1,6 +1,14 @@
 use crate::{parse, Align, Base, Builder, Dynamic, Numeric, Sign};
 use iterext::prelude::*;
-use std::{collections::VecDeque, str::FromStr};
+use std::{any::type_name, collections::VecDeque, str::FromStr};
+
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    #[error("Zero formatter is only compatible with Align::Right or Align::Decimal")]
+    IncompatibleAlignment,
+    #[error("{0:?} formatting not implemented for {1}")]
+    NotImplemented(Base, &'static str),
+}
 
 /// Formatter for numbers.
 #[derive(Clone, PartialEq, Eq, Debug, Default)]
@@ -75,7 +83,7 @@ impl NumFmt {
     /// Will return `None` in the event that the configured format is incompatible with
     /// the number provided. This is most often the case when the number is not an
     /// integer but an integer format such as `b`, `o`, or `x` is configured.
-    pub fn fmt<N: Numeric>(&self, number: N) -> Option<String> {
+    pub fn fmt<N: Numeric>(&self, number: N) -> Result<String, Error> {
         self.fmt_with(number, Dynamic::default())
     }
 
@@ -93,7 +101,10 @@ impl NumFmt {
     /// Will return `None` in the event that the configured format is incompatible with
     /// the number provided. This is most often the case when the number is not an
     /// integer but an integer format such as `b`, `o`, or `x` is configured.
-    pub fn fmt_with<N: Numeric>(&self, number: N, dynamic: Dynamic) -> Option<String> {
+    pub fn fmt_with<N: Numeric>(&self, number: N, dynamic: Dynamic) -> Result<String, Error> {
+        if self.zero() && !(self.align() == Align::Right || self.align() == Align::Decimal) {
+            return Err(Error::IncompatibleAlignment);
+        }
         let negative = number.is_negative() && self.base() == Base::Decimal;
         let decimal_separator = self.decimal_separator();
 
@@ -108,8 +119,24 @@ impl NumFmt {
         // core formatting: construct a reversed queue of digits, with separator and decimal
         // decimal is the index of the decimal point
         let (mut digits, decimal_pos): (VecDeque<_>, Option<usize>) = match self.base() {
-            Base::Binary => (self.normalize(number.binary()?, dynamic), None),
-            Base::Octal => (self.normalize(number.octal()?, dynamic), None),
+            Base::Binary => (
+                self.normalize(
+                    number
+                        .binary()
+                        .ok_or_else(|| Error::NotImplemented(self.base(), type_name::<N>()))?,
+                    dynamic,
+                ),
+                None,
+            ),
+            Base::Octal => (
+                self.normalize(
+                    number
+                        .octal()
+                        .ok_or_else(|| Error::NotImplemented(self.base(), type_name::<N>()))?,
+                    dynamic,
+                ),
+                None,
+            ),
             Base::Decimal => {
                 let (left, right) = number.decimal();
                 let mut dq = self.normalize(left, dynamic);
@@ -135,9 +162,23 @@ impl NumFmt {
                 }
                 (dq, Some(decimal))
             }
-            Base::LowerHex => (self.normalize(number.hex()?, dynamic), None),
+            Base::LowerHex => (
+                self.normalize(
+                    number
+                        .hex()
+                        .ok_or_else(|| Error::NotImplemented(self.base(), type_name::<N>()))?,
+                    dynamic,
+                ),
+                None,
+            ),
             Base::UpperHex => (
-                self.normalize(number.hex()?.map(|ch| ch.to_ascii_uppercase()), dynamic),
+                self.normalize(
+                    number
+                        .hex()
+                        .ok_or_else(|| Error::NotImplemented(self.base(), type_name::<N>()))?
+                        .map(|ch| ch.to_ascii_uppercase()),
+                    dynamic,
+                ),
                 None,
             ),
         };
@@ -241,7 +282,7 @@ impl NumFmt {
             rendered.push(self.fill());
         }
 
-        Some(rendered)
+        Ok(rendered)
     }
 
     /// `char` used to pad the extra space when the rendered number is smaller than the `width`.

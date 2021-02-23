@@ -2,7 +2,7 @@ use crate::{parse, Align, Base, Builder, Dynamic, Numeric, Sign};
 use iterext::prelude::*;
 use std::{any::type_name, collections::VecDeque, str::FromStr};
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, PartialEq, Eq, Clone)]
 pub enum Error {
     #[error("Zero formatter is only compatible with Align::Right or Align::Decimal")]
     IncompatibleAlignment,

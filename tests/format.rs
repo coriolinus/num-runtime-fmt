@@ -202,6 +202,14 @@ test_mod! { spacing:
     space_float(" 5", 123456789.0, "1234 56789");
     under_float("_6", 123456789.0, "123_456789");
 
+    dyn_comma(",", Dynamic::spacing(1), 123456789, "1,2,3,4,5,6,7,8,9");
+    dyn_space(" ", Dynamic::spacing(2), 123456789, "1 23 45 67 89");
+    dyn_under("_", Dynamic::spacing(3), 123456789, "123_456_789");
+
+    dyn_comma_float(",", Dynamic::spacing(4), 123456789.0, "1,2345,6789");
+    dyn_space_float(" ", Dynamic::spacing(5), 123456789.0, "1234 56789");
+    dyn_under_float("_", Dynamic::spacing(6), 123456789.0, "123_456789");
+
     // TODO: do we _want_ post-decimal commas? Those feel weird to me somehow.
     only_pre_decimal(".9,7", 123456789.87654321, "12,3456789.876543210");
 }

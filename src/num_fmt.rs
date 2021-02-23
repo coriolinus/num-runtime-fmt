@@ -182,16 +182,6 @@ impl NumFmt {
                 None,
             ),
         };
-        let width_desired = self.width_desired(dynamic);
-        let mut decimal_pos = decimal_pos.unwrap_or_else(|| digits.len());
-        // padding and separating can introduce extraneous leading 0 chars, so let's fix that
-        while decimal_pos > width_desired && {
-            let last = *digits.back().expect("can't be empty while decimal_pos > 0");
-            last == '0' || matches_separator(last)
-        } {
-            decimal_pos -= 1;
-            digits.pop_back();
-        }
 
         debug_assert!(
             {
@@ -222,6 +212,23 @@ impl NumFmt {
             },
             "illegal characters in number; check its `impl Numeric`",
         );
+
+        let width_desired = self.width_desired(dynamic);
+        let mut decimal_pos = decimal_pos.unwrap_or_else(|| digits.len());
+        let mut digit_count = if self.align() == Align::Decimal {
+            decimal_pos
+        } else {
+            digits.len()
+        };
+        // padding and separating can introduce extraneous leading 0 chars, so let's fix that
+        while digit_count > width_desired && {
+            let last = *digits.back().expect("can't be empty while decimal_pos > 0");
+            last == '0' || matches_separator(last)
+        } {
+            digit_count -= 1;
+            decimal_pos -= 1;
+            digits.pop_back();
+        }
 
         let width_used = digits.len();
         let (mut padding_front, padding_rear) = match self.align() {

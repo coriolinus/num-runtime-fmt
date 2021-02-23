@@ -153,6 +153,17 @@ impl Builder {
     /// # use num_runtime_fmt::{NumFmt, Dynamic};
     /// assert_eq!(NumFmt::from_str("-^").unwrap().fmt_with(1, Dynamic::width(5)).unwrap(), "--1--");
     /// ```
+    ///
+    /// Note: with `Align::Right`, this is the minimum width of the entire rendered field,
+    /// not just the portion before the decimal. To set the width before the decimal,
+    /// use `Align::Decimal`.
+    ///
+    /// ```rust
+    /// # use num_runtime_fmt::{NumFmt, Dynamic};
+    /// assert_eq!(NumFmt::from_str( "05").unwrap().fmt(1.1).unwrap(),   "001.1");
+    /// assert_eq!(NumFmt::from_str(">05").unwrap().fmt(1.1).unwrap(),   "001.1");
+    /// assert_eq!(NumFmt::from_str("v05").unwrap().fmt(1.1).unwrap(), "00001.1");
+    /// ```
     #[inline]
     pub fn width(mut self, param: usize) -> Self {
         self.width = param;

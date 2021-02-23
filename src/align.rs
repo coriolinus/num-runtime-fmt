@@ -3,7 +3,7 @@
 /// - `Right`: the output is right-aligned in `width` columns (default).
 /// - `Center`: the output is centered in `width` columns.
 /// - `Left`: the output is left-aligned in `width` columns.
-/// - `Decimal`: attempt to align the decimal point at column index `width`. For integers,
+/// - `Decimal`: `width` sets the minimal width before the decimal. For integers,
 ///   equivalent to `Right`.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Align {

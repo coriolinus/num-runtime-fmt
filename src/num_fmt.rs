@@ -88,6 +88,7 @@ impl NumFmt {
     pub fn fmt_with<N: Numeric>(&self, number: N, dynamic: Dynamic) -> Option<String> {
         let negative = number.is_negative() && self.base() == Base::Decimal;
         let separator = self.separator();
+        let decimal_separator = self.decimal_separator();
         let spacing = self.spacing_with(dynamic);
 
         // core formatting: construct a reversed queue of digits, with separator and decimal
@@ -133,12 +134,20 @@ impl NumFmt {
 
         debug_assert!(
             {
-                let legal: &dyn Fn(&char) -> bool = match self.base() {
-                    Base::Binary => &|ch| ('0'..='1').contains(ch),
-                    Base::Octal => &|ch| ('0'..='7').contains(ch),
-                    Base::Decimal => &|ch| *ch == '.' || ('0'..='9').contains(ch),
-                    Base::LowerHex => &|ch| ('0'..='9').contains(ch) || ('a'..='f').contains(ch),
-                    Base::UpperHex => &|ch| ('0'..='9').contains(ch) || ('A'..='F').contains(ch),
+                let legal: Box<dyn Fn(&char) -> bool> = match self.base() {
+                    Base::Binary => {
+                        Box::new(move |ch| *ch == separator || ('0'..='1').contains(ch))
+                    }
+                    Base::Octal => Box::new(move |ch| *ch == separator || ('0'..='7').contains(ch)),
+                    Base::Decimal => Box::new(move |ch| {
+                        *ch == decimal_separator || *ch == separator || ('0'..='9').contains(ch)
+                    }),
+                    Base::LowerHex => Box::new(move |ch| {
+                        *ch == separator || ('0'..='9').contains(ch) || ('a'..='f').contains(ch)
+                    }),
+                    Base::UpperHex => Box::new(move |ch| {
+                        *ch == separator || ('0'..='9').contains(ch) || ('A'..='F').contains(ch)
+                    }),
                 };
                 digits.iter().all(legal)
             },

@@ -41,7 +41,7 @@ pub enum Error {
 /// Parse a `NumFmt` instance from a format string.
 ///
 /// See crate-level docs for the grammar.
-pub fn parse(s: &str) -> Result<NumFmt, Error> {
+pub(crate) fn parse(s: &str) -> Result<NumFmt, Error> {
     let captures = PARSE_RE.captures(s).ok_or(Error::NoMatch)?;
     let str_of = |name: &str| captures.name(name).map(|m| m.as_str());
     let char_of = |name: &str| str_of(name).and_then(|s| s.chars().next());

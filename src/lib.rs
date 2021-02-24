@@ -186,7 +186,7 @@ mod builder;
 mod dynamic;
 mod num_fmt;
 pub mod numeric_trait;
-mod parse;
+pub mod parse;
 mod sign;
 
 pub use align::Align;
